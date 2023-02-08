@@ -1,0 +1,18 @@
+{% set client = hostvars[item] %}
+{% set servername = groups['wg_server'][0] %}
+{% set server = hostvars[servername] %}
+[Interface]
+PrivateKey = {{ client.wg_key }}
+{% if client.wg_ip4 | default(false) %}
+Address = {{ client.wg_ip4 }}
+{% endif %}
+{% if client.wg_ip6 | default(false) %}
+Address = {{ client.wg_ip6 }}
+{% endif %}
+DNS = {{ server.wg_dns }}
+
+[Peer]
+PublicKey = {{ server_pubkey.stdout }}
+Endpoint = {{ server.wg_hostname }}:{{ server.wg_port }}
+AllowedIPs = {{ server.wg_routes | join(',') }}
+PersistentKeepalive = 25

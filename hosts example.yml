@@ -1,0 +1,30 @@
+all:
+  children:
+    wg_server:
+      hosts:
+        vpnserver:
+          wg_key: q2w3e4r5t6
+          wg_ip4: "10.0.0.0/24"
+          wg_ip6: "fd01::/64"
+          wg_dns: "1.2.3.4"
+          wg_hostname: "vpn.example.com"
+          wg_port: "666"
+          wg_routes:
+            - "0.0.0.0/0"
+            - "::/0"
+          wg_interface: "wg0"
+          wg_extraconf:
+            - "PostUp = ip6tables -t nat -A POSTROUTING -s fd01::/64 -o eth0 ! -d fc00::/7 -j MASQUERADE"
+            - "PreDown = ip6tables -t nat -D POSTROUTING -s fd01::/64 -o eth0 ! -d fc00::/7 -j MASQUERADE"
+    wg_clients:
+      hosts:
+        client_1:
+          wg_key: asdfg
+          wg_ip4: "10.0.0.2"
+          wg_ip6: "fd01::2"
+        clinet_2:
+          wg_key: qwerty
+          wg_ip4: "10.0.0.3"
+          wg_ip6: "fd01::3"
+
+# vim: shiftwidth=2

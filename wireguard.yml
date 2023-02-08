@@ -1,0 +1,54 @@
+- name: Setup Wireguard server
+  hosts: wg_server
+  tasks:
+    - name: Install wireguard
+      apt:
+        name:
+          - wireguard
+          - wireguard-tools
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+    - name: generate public keys
+      shell: "echo \"{{ hostvars[item].wg_key }}\" | wg pubkey"
+      register: pubkeys
+      delegate_to: localhost
+      changed_when: false
+      with_items: "{{ groups['wg_clients'] | list }}"
+    - name: Generate Server wg-config
+      template:
+        src: wg_server.j2
+        dest: "/etc/wireguard/{{ wg_interface }}.conf"
+      notify: read wg config
+#    - name: Gemerate debian-specific interface-config
+#      template:
+#        src: debian_interface.j2
+#        dest: "/etc/network/interfaces.d/{{ wg_interface }}"
+#      when: ansible_facts['os_family'] == "Debian"
+#      notify: reload interface
+    - name: Start and enable wg-quick service
+      service:
+        name: "wg-quick@{{ wg_interface }}"
+        state: started
+        enabled: true
+  handlers:
+    - name: read wg config
+      shell: "wg syncconf {{ wg_interface }} <(wg-quick strip {{ wg_interface }})"
+#      command: "wg setconf {{ wg_interface }} /etc/wireguard/{{ wg_interface }}.conf"
+#    - name: reload interface
+#      shell: "ifdown {{ wg_interface }}; ifup {{ wg_interface }}"
+- name: Generate client configs
+  hosts: localhost
+  tasks:
+    - name: Ensure cient conf directory exists
+      file:
+        path: wg_clients
+        state: directory
+    - name: generate server pubkey
+      shell: "echo \"{{ hostvars[groups['wg_server'][0]].wg_key }}\" | wg pubkey"
+      register: server_pubkey
+      changed_when: false
+    - name: generate client config
+      template:
+        src: wg_client.j2
+        dest: "wg_clients/wg_{{ item }}.conf"
+      with_items: "{{ groups['wg_clients'] | list }}"
